@@ -1,9 +1,82 @@
-import React, { useState } from 'react';
-import { DollarSign, Plus, Minus, X, Edit3, Settings } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { DollarSign, Plus, Minus, X, Settings, Save, Calendar, Archive, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import jsPDF from 'jspdf';
+
+interface MonthlyData {
+  income: {
+    primarySalary: number;
+    businessIncome: number;
+    otherIncome: number;
+  };
+  automaticDeductions: {
+    '401k_contribution': { amount: number; description: string };
+    'hsa_contribution': { amount: number; description: string };
+    'cigna_insurance': { amount: number; description: string };
+    'health_insurance': { amount: number; description: string };
+    'life_insurance': { amount: number; description: string };
+    'disability_insurance': { amount: number; description: string };
+    'parking_transit': { amount: number; description: string };
+    'dependent_care_fsa': { amount: number; description: string };
+    'other_pretax': { amount: number; description: string };
+  };
+  investments: {
+    fidelity: number;
+    vanguard: number;
+    schwab_roth_ira: number;
+    swan_crypto: number;
+    river_crypto: number;
+  };
+  savings: {
+    marcus_hysa_emergency: number;
+    chase_business_checking: number;
+  };
+  venmo: {
+    venmo_cashout: number;
+    venmo_payments: number;
+    venmo_received: number;
+  };
+  creditCards: {
+    discover: number;
+    chase_sapphire: number;
+    x1: number;
+    wells_fargo: number;
+  };
+  essentials: {
+    rent_mortgage: number;
+    utilities: number;
+    insurance: number;
+    phone: number;
+    groceries: number;
+    transportation: number;
+  };
+  discretionary: {
+    dining_out: number;
+    entertainment: number;
+    shopping: number;
+    subscriptions: number;
+    travel: number;
+    other: number;
+  };
+}
+
+interface SavedMonth {
+  id: string;
+  monthYear: string;
+  data: MonthlyData;
+  customExpenses: Array<{ id: number; category: string; name: string; amount: number }>;
+  timestamp: string;
+}
 
 const FinancialTracker = () => {
-  // Configuration state for default values
+  // UI state
   const [showSettings, setShowSettings] = useState(false);
+  const [showArchive, setShowArchive] = useState(false);
+  const [currentMonthYear, setCurrentMonthYear] = useState(() => {
+    const now = new Date();
+    return format(now, 'yyyy-MM');
+  });
+  const [savedMonths, setSavedMonths] = useState<SavedMonth[]>([]);
   const [defaultConfig, setDefaultConfig] = useState({
     primarySalary: 6859,
     automaticDeductions: {
@@ -82,46 +155,67 @@ const FinancialTracker = () => {
   });
 
   // Custom itemized expenses
-  const [customExpenses, setCustomExpenses] = useState([]);
+  const [customExpenses, setCustomExpenses] = useState<Array<{ id: number; category: string; name: string; amount: number }>>([]);
   const [newExpense, setNewExpense] = useState({ category: '', name: '', amount: 0 });
 
-  const updateValue = (category, subcategory, value) => {
+  // Load saved months from localStorage on component mount
+  useEffect(() => {
+    const stored = localStorage.getItem('financial-tracker-months');
+    if (stored) {
+      setSavedMonths(JSON.parse(stored));
+    }
+    loadMonthData(currentMonthYear);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Save to localStorage whenever savedMonths changes
+  useEffect(() => {
+    localStorage.setItem('financial-tracker-months', JSON.stringify(savedMonths));
+  }, [savedMonths]);
+
+  // Load month data when currentMonthYear changes
+  useEffect(() => {
+    loadMonthData(currentMonthYear);
+  }, [currentMonthYear]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const updateValue = (category: string, subcategory: string, value: string) => {
     setMonthlyData(prev => ({
       ...prev,
       [category]: {
-        ...prev[category],
+        ...prev[category as keyof typeof prev],
         [subcategory]: parseFloat(value) || 0
       }
     }));
   };
 
-  const updateDeductionAmount = (key, amount) => {
+  const updateDeductionAmount = (key: string, amount: string) => {
     setMonthlyData(prev => ({
       ...prev,
       automaticDeductions: {
         ...prev.automaticDeductions,
         [key]: {
-          ...prev.automaticDeductions[key],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ...(prev.automaticDeductions as any)[key],
           amount: parseFloat(amount) || 0
         }
       }
     }));
   };
 
-  const updateDeductionDescription = (key, description) => {
+  const updateDeductionDescription = (key: string, description: string) => {
     setMonthlyData(prev => ({
       ...prev,
       automaticDeductions: {
         ...prev.automaticDeductions,
         [key]: {
-          ...prev.automaticDeductions[key],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ...(prev.automaticDeductions as any)[key],
           description: description
         }
       }
     }));
   };
 
-  const updateDefaultConfig = (category, key, field, value) => {
+  const updateDefaultConfig = (category: string, key: string | null, field: string | null, value: string) => {
     if (category === 'primarySalary') {
       setDefaultConfig(prev => ({
         ...prev,
@@ -132,9 +226,10 @@ const FinancialTracker = () => {
         ...prev,
         automaticDeductions: {
           ...prev.automaticDeductions,
-          [key]: {
-            ...prev.automaticDeductions[key],
-            [field]: field === 'amount' ? parseFloat(value) || 0 : value
+          [key as string]: {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ...(prev.automaticDeductions as any)[key as string],
+            [field as string]: field === 'amount' ? parseFloat(value) || 0 : value
           }
         }
       }));
@@ -172,14 +267,195 @@ const FinancialTracker = () => {
     }
   };
 
-  const removeCustomExpense = (id) => {
+  const removeCustomExpense = (id: number) => {
     setCustomExpenses(prev => prev.filter(expense => expense.id !== id));
   };
 
-  const updateCustomExpense = (id, field, value) => {
+  const updateCustomExpense = (id: number, field: string, value: string | number) => {
     setCustomExpenses(prev => prev.map(expense => 
-      expense.id === id ? { ...expense, [field]: field === 'amount' ? parseFloat(value) || 0 : value } : expense
+      expense.id === id ? { ...expense, [field]: field === 'amount' ? parseFloat(value as string) || 0 : value } : expense
     ));
+  };
+
+  // Month management functions
+  const loadMonthData = (monthYear: string) => {
+    const saved = savedMonths.find(m => m.monthYear === monthYear);
+    if (saved) {
+      setMonthlyData(saved.data);
+      setCustomExpenses(saved.customExpenses);
+    } else {
+      // Reset to defaults for new month
+      setMonthlyData({
+        income: {
+          primarySalary: defaultConfig.primarySalary,
+          businessIncome: 0,
+          otherIncome: 0
+        },
+        automaticDeductions: { ...defaultConfig.automaticDeductions },
+        investments: {
+          fidelity: 0,
+          vanguard: 0,
+          schwab_roth_ira: 0,
+          swan_crypto: 0,
+          river_crypto: 0
+        },
+        savings: {
+          marcus_hysa_emergency: 0,
+          chase_business_checking: 0
+        },
+        venmo: {
+          venmo_cashout: 0,
+          venmo_payments: 0,
+          venmo_received: 0
+        },
+        creditCards: {
+          discover: 0,
+          chase_sapphire: 0,
+          x1: 0,
+          wells_fargo: 0
+        },
+        essentials: {
+          rent_mortgage: 0,
+          utilities: 0,
+          insurance: 0,
+          phone: 0,
+          groceries: 0,
+          transportation: 0
+        },
+        discretionary: {
+          dining_out: 0,
+          entertainment: 0,
+          shopping: 0,
+          subscriptions: 0,
+          travel: 0,
+          other: 0
+        }
+      });
+      setCustomExpenses([]);
+    }
+  };
+
+  const saveCurrentMonth = () => {
+    const existingIndex = savedMonths.findIndex(m => m.monthYear === currentMonthYear);
+    const savedMonth: SavedMonth = {
+      id: currentMonthYear,
+      monthYear: currentMonthYear,
+      data: monthlyData,
+      customExpenses: customExpenses,
+      timestamp: new Date().toISOString()
+    };
+
+    if (existingIndex >= 0) {
+      setSavedMonths(prev => prev.map((m, i) => i === existingIndex ? savedMonth : m));
+    } else {
+      setSavedMonths(prev => [...prev, savedMonth]);
+    }
+  };
+
+  const deleteMonth = (monthYear: string) => {
+    setSavedMonths(prev => prev.filter(m => m.monthYear !== monthYear));
+    if (monthYear === currentMonthYear) {
+      // If deleting current month, reset to current month
+      const now = new Date();
+      setCurrentMonthYear(format(now, 'yyyy-MM'));
+    }
+  };
+
+  const navigateMonth = (direction: 'prev' | 'next') => {
+    const currentDate = parseISO(currentMonthYear + '-01');
+    const newDate = new Date(currentDate);
+    
+    if (direction === 'prev') {
+      newDate.setMonth(newDate.getMonth() - 1);
+    } else {
+      newDate.setMonth(newDate.getMonth() + 1);
+    }
+    
+    setCurrentMonthYear(format(newDate, 'yyyy-MM'));
+  };
+
+  // PDF Export functionality
+  const generatePDF = async () => {
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    
+    // Header
+    pdf.setFontSize(20);
+    pdf.text('Financial Summary Report', pageWidth / 2, 20, { align: 'center' });
+    pdf.setFontSize(14);
+    pdf.text(`Month: ${format(parseISO(currentMonthYear + '-01'), 'MMMM yyyy')}`, pageWidth / 2, 30, { align: 'center' });
+    
+    let yPosition = 45;
+    
+    // Summary section
+    pdf.setFontSize(16);
+    pdf.text('Financial Summary', 20, yPosition);
+    yPosition += 10;
+    
+    pdf.setFontSize(12);
+    pdf.text(`Total Income: $${totalIncome.toLocaleString()}`, 20, yPosition);
+    yPosition += 6;
+    pdf.text(`Total Outflows: $${totalOutflows.toLocaleString()}`, 20, yPosition);
+    yPosition += 6;
+    pdf.text(`Net Cash Flow: $${netCashFlow.toLocaleString()}`, 20, yPosition);
+    yPosition += 6;
+    pdf.text(`Investment Rate: ${totalIncome > 0 ? ((totalInvestments / totalIncome) * 100).toFixed(1) : 0}%`, 20, yPosition);
+    yPosition += 6;
+    pdf.text(`Savings Rate: ${totalIncome > 0 ? ((totalSavings / totalIncome) * 100).toFixed(1) : 0}%`, 20, yPosition);
+    yPosition += 15;
+    
+    // Categories breakdown
+    const categories = [
+      { name: 'Income', total: totalIncome, items: monthlyData.income },
+      { name: 'Investments', total: totalInvestments, items: monthlyData.investments },
+      { name: 'Savings', total: totalSavings, items: monthlyData.savings },
+      { name: 'Credit Cards', total: totalCreditCards, items: monthlyData.creditCards },
+      { name: 'Essentials', total: totalEssentials, items: monthlyData.essentials },
+      { name: 'Discretionary', total: totalDiscretionary, items: monthlyData.discretionary }
+    ];
+    
+    for (const category of categories) {
+      if (yPosition > pageHeight - 30) {
+        pdf.addPage();
+        yPosition = 20;
+      }
+      
+      pdf.setFontSize(14);
+      pdf.text(`${category.name}: $${category.total.toLocaleString()}`, 20, yPosition);
+      yPosition += 8;
+      
+      pdf.setFontSize(10);
+      Object.entries(category.items).forEach(([key, value]) => {
+        if (typeof value === 'number' && value > 0) {
+          const displayName = key.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1');
+          pdf.text(`  ${displayName}: $${value.toLocaleString()}`, 25, yPosition);
+          yPosition += 5;
+        }
+      });
+      yPosition += 5;
+    }
+    
+    // Custom expenses
+    if (customExpenses.length > 0) {
+      if (yPosition > pageHeight - 40) {
+        pdf.addPage();
+        yPosition = 20;
+      }
+      
+      pdf.setFontSize(14);
+      pdf.text(`Custom Expenses: $${totalCustomExpenses.toLocaleString()}`, 20, yPosition);
+      yPosition += 8;
+      
+      pdf.setFontSize(10);
+      customExpenses.forEach(expense => {
+        pdf.text(`  ${expense.category} - ${expense.name}: $${expense.amount.toLocaleString()}`, 25, yPosition);
+        yPosition += 5;
+      });
+    }
+    
+    // Save the PDF
+    pdf.save(`financial-summary-${currentMonthYear}.pdf`);
   };
 
   // Calculate totals
@@ -294,7 +570,117 @@ const FinancialTracker = () => {
     </div>
   );
 
-  const TableSection = ({ title, data, category, bgColor = "bg-gray-50" }) => (
+  const ArchiveModal = () => (
+    <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 ${showArchive ? 'block' : 'hidden'}`}>
+      <div className="flex items-center justify-center min-h-screen p-4">
+        <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold">Monthly Archive</h2>
+              <button
+                onClick={() => setShowArchive(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              {savedMonths.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No saved months yet. Save your current month to get started!</p>
+              ) : (
+                savedMonths
+                  .sort((a, b) => b.monthYear.localeCompare(a.monthYear))
+                  .map((month) => {
+                    const monthIncome = Object.values(month.data.income).reduce((sum, val) => sum + val, 0);
+                    const monthOutflows = Object.values(month.data.automaticDeductions).reduce((sum, val) => sum + val.amount, 0) +
+                                        Object.values(month.data.investments).reduce((sum, val) => sum + val, 0) +
+                                        Object.values(month.data.savings).reduce((sum, val) => sum + val, 0) +
+                                        Object.values(month.data.creditCards).reduce((sum, val) => sum + val, 0) +
+                                        Object.values(month.data.essentials).reduce((sum, val) => sum + val, 0) +
+                                        Object.values(month.data.discretionary).reduce((sum, val) => sum + val, 0) +
+                                        month.customExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+                    const monthNetCashFlow = monthIncome - monthOutflows;
+                    
+                    return (
+                      <div key={month.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold">
+                              {format(parseISO(month.monthYear + '-01'), 'MMMM yyyy')}
+                            </h3>
+                            <p className="text-sm text-gray-500 mb-3">
+                              Last updated: {format(parseISO(month.timestamp), 'MMM dd, yyyy HH:mm')}
+                            </p>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+                              <div className="bg-green-50 p-3 rounded">
+                                <p className="font-medium text-green-800">Income</p>
+                                <p className="text-lg font-bold text-green-900">${monthIncome.toLocaleString()}</p>
+                              </div>
+                              <div className="bg-red-50 p-3 rounded">
+                                <p className="font-medium text-red-800">Outflows</p>
+                                <p className="text-lg font-bold text-red-900">${monthOutflows.toLocaleString()}</p>
+                              </div>
+                              <div className={`${monthNetCashFlow >= 0 ? 'bg-blue-50' : 'bg-orange-50'} p-3 rounded`}>
+                                <p className={`font-medium ${monthNetCashFlow >= 0 ? 'text-blue-800' : 'text-orange-800'}`}>Net Cash Flow</p>
+                                <p className={`text-lg font-bold ${monthNetCashFlow >= 0 ? 'text-blue-900' : 'text-orange-900'}`}>
+                                  ${monthNetCashFlow.toLocaleString()}
+                                </p>
+                              </div>
+                              <div className="bg-purple-50 p-3 rounded">
+                                <p className="font-medium text-purple-800">Investments</p>
+                                <p className="text-lg font-bold text-purple-900">
+                                  ${Object.values(month.data.investments).reduce((sum, val) => sum + val, 0).toLocaleString()}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="flex space-x-2 ml-4">
+                            <button
+                              onClick={() => {
+                                setCurrentMonthYear(month.monthYear);
+                                setShowArchive(false);
+                              }}
+                              className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
+                            >
+                              View/Edit
+                            </button>
+                            <button
+                              onClick={() => {
+                                setCurrentMonthYear(month.monthYear);
+                                setShowArchive(false);
+                                setTimeout(() => generatePDF(), 500);
+                              }}
+                              className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600"
+                            >
+                              Export PDF
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (confirm(`Delete ${format(parseISO(month.monthYear + '-01'), 'MMMM yyyy')}?`)) {
+                                  deleteMonth(month.monthYear);
+                                }
+                              }}
+                              className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const TableSection = ({ title, data, category, bgColor = "bg-gray-50" }: { title: string; data: Record<string, number>; category: string; bgColor?: string }) => (
     <div className="mb-6">
       <h3 className={`text-lg font-semibold p-3 ${bgColor} border-b`}>{title}</h3>
       {Object.entries(data).map(([key, value]) => (
@@ -530,8 +916,9 @@ const FinancialTracker = () => {
 
   return (
     <div className="max-w-6xl mx-auto p-6 bg-white">
-      {/* Settings Modal */}
+      {/* Modals */}
       <SettingsModal />
+      <ArchiveModal />
       
       <div className="mb-8">
         <div className="flex justify-between items-start">
@@ -539,13 +926,65 @@ const FinancialTracker = () => {
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Financial Tracking Framework</h1>
             <p className="text-gray-600">Track income and allocations across all accounts and spending categories</p>
           </div>
-          <button
-            onClick={() => setShowSettings(true)}
-            className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg flex items-center"
-          >
-            <Settings size={16} className="mr-2" />
-            Settings
-          </button>
+          <div className="flex space-x-3">
+            <button
+              onClick={() => setShowSettings(true)}
+              className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg flex items-center"
+            >
+              <Settings size={16} className="mr-2" />
+              Settings
+            </button>
+            <button
+              onClick={() => setShowArchive(true)}
+              className="bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-lg flex items-center"
+            >
+              <Archive size={16} className="mr-2" />
+              Archive
+            </button>
+          </div>
+        </div>
+
+        {/* Month Navigation */}
+        <div className="flex justify-between items-center mt-6 p-4 bg-gray-50 rounded-lg">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => navigateMonth('prev')}
+              className="bg-white hover:bg-gray-100 text-gray-700 px-3 py-2 rounded border flex items-center"
+            >
+              <ChevronLeft size={16} className="mr-1" />
+              Previous
+            </button>
+            <div className="flex items-center space-x-2">
+              <Calendar size={16} className="text-gray-600" />
+              <span className="text-lg font-semibold">
+                {format(parseISO(currentMonthYear + '-01'), 'MMMM yyyy')}
+              </span>
+            </div>
+            <button
+              onClick={() => navigateMonth('next')}
+              className="bg-white hover:bg-gray-100 text-gray-700 px-3 py-2 rounded border flex items-center"
+            >
+              Next
+              <ChevronRight size={16} className="ml-1" />
+            </button>
+          </div>
+          
+          <div className="flex space-x-2">
+            <button
+              onClick={saveCurrentMonth}
+              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded flex items-center"
+            >
+              <Save size={16} className="mr-2" />
+              Save Month
+            </button>
+            <button
+              onClick={generatePDF}
+              className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded flex items-center"
+            >
+              <Download size={16} className="mr-2" />
+              Export PDF
+            </button>
+          </div>
         </div>
       </div>
 
@@ -731,7 +1170,7 @@ const FinancialTracker = () => {
           <li>• <strong>Settings:</strong> Click the Settings button to configure your default salary and automatic deductions.</li>
           <li>• <strong>Auto Deductions:</strong> Edit amounts and descriptions to match your actual paycheck deductions.</li>
           <li>• <strong>Venmo Tracking:</strong> Use positive values for money coming in, negative for money going out.</li>
-          <li>• <strong>Custom Expenses:</strong> Add specific purchases with categories for detailed tracking (e.g., "Dining - Starbucks - $15.50").</li>
+          <li>• <strong>Custom Expenses:</strong> Add specific purchases with categories for detailed tracking (e.g., &ldquo;Dining - Starbucks - $15.50&rdquo;).</li>
           <li>• <strong>Investment Allocation:</strong> Track monthly contributions to each of your investment accounts.</li>
           <li>• <strong>Goal:</strong> Aim for positive net cash flow and 20%+ total investment rate across all accounts.</li>
         </ul>
