@@ -51,7 +51,6 @@ interface MonthlyData {
     rent_mortgage: number;
     utilities: number;
     insurance: number;
-    phone: number;
     groceries: number;
     transportation: number;
   };

@@ -57,7 +57,8 @@ Track necessary monthly expenses:
 - **Rent/Mortgage**
 - **Utilities**
 - **Insurance**
-- **Phone Bills**
+
+
 - **Groceries** 
 - **Transportation**
 

@@ -86,24 +86,13 @@ const FinancialTracker = () => {
     },
     
     // Essential Expenses
-    essentials: {
-      rent_mortgage: 0,
-      utilities: 0,
-      insurance: 0,
-      phone: 0,
-      groceries: 0,
-      transportation: 0
-    },
-    
-    // Discretionary Spending - Fixed categories
-    discretionary: {
-      dining_out: 0,
-      entertainment: 0,
-      shopping: 0,
-      subscriptions: 0,
-      travel: 0,
-      other: 0
-    }
+            essentials: {
+          rent_mortgage: 0,
+          utilities: 0,
+          insurance: 0,
+          groceries: 0,
+          transportation: 0
+        }
   });
 
   // Custom itemized expenses
@@ -219,14 +208,6 @@ const FinancialTracker = () => {
           phone: 0,
           groceries: 0,
           transportation: 0
-        },
-        discretionary: {
-          dining_out: 0,
-          entertainment: 0,
-          shopping: 0,
-          subscriptions: 0,
-          travel: 0,
-          other: 0
         }
       });
       setCustomExpenses([]);
@@ -295,7 +276,6 @@ const FinancialTracker = () => {
         totalSavings,
         totalCreditCards,
         totalEssentials,
-        totalDiscretionary,
         totalCustomExpenses
       }
     };
@@ -393,10 +373,9 @@ const FinancialTracker = () => {
   const totalVenmo = Object.values(monthlyData.venmo).reduce((sum, val) => sum + val, 0);
   const totalCreditCards = Object.values(monthlyData.creditCards).reduce((sum, val) => sum + val, 0);
   const totalEssentials = Object.values(monthlyData.essentials).reduce((sum, val) => sum + val, 0);
-  const totalDiscretionary = Object.values(monthlyData.discretionary).reduce((sum, val) => sum + val, 0);
   const totalCustomExpenses = customExpenses.reduce((sum, expense) => sum + expense.amount, 0);
   
-  const totalOutflows = totalInvestments + totalSavings + Math.abs(totalVenmo) + totalCreditCards + totalEssentials + totalDiscretionary + totalCustomExpenses;
+  const totalOutflows = totalInvestments + totalSavings + Math.abs(totalVenmo) + totalCreditCards + totalEssentials + totalCustomExpenses;
   const netCashFlow = totalMonthlyIncome - totalOutflows;
 
   // Prepare spending chart data
@@ -405,7 +384,6 @@ const FinancialTracker = () => {
     { name: 'Savings', amount: totalSavings, color: '#10b981' },
     { name: 'Credit Cards', amount: totalCreditCards, color: '#f59e0b' },
     { name: 'Essentials', amount: totalEssentials, color: '#ef4444' },
-    { name: 'Discretionary', amount: totalDiscretionary, color: '#ec4899' },
     { name: 'Custom Expenses', amount: totalCustomExpenses, color: '#f97316' }
   ];
 
@@ -508,7 +486,6 @@ const FinancialTracker = () => {
                                          Object.values(month.data.savings).reduce((sum, val) => sum + val, 0) +
                                          Object.values(month.data.creditCards).reduce((sum, val) => sum + val, 0) +
                                          Object.values(month.data.essentials).reduce((sum, val) => sum + val, 0) +
-                                         Object.values(month.data.discretionary).reduce((sum, val) => sum + val, 0) +
                                          month.customExpenses.reduce((sum, expense) => sum + expense.amount, 0);
                     const monthNetCashFlow = monthIncome - monthOutflows;
                     
@@ -795,14 +772,7 @@ const FinancialTracker = () => {
           onUpdate={updateValue}
         />
 
-        {/* Discretionary Spending */}
-        <TableSection 
-          title="🎯 Discretionary Spending (Fixed Categories)" 
-          data={monthlyData.discretionary} 
-          category="discretionary"
-          bgColor="bg-pink-100"
-          onUpdate={updateValue}
-        />
+
 
         {/* Custom Expenses Section */}
         <CustomExpensesSection 
@@ -856,10 +826,6 @@ const FinancialTracker = () => {
                   <span className="font-medium">-${totalEssentials.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Discretionary:</span>
-                  <span className="font-medium">-${totalDiscretionary.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
                   <span>Custom Expenses:</span>
                   <span className="font-medium">-${totalCustomExpenses.toLocaleString()}</span>
                 </div>
@@ -886,7 +852,7 @@ const FinancialTracker = () => {
                 </div>
                 <div className="flex justify-between">
                   <span>Total Spending:</span>
-                  <span className="font-medium">${(totalCreditCards + totalEssentials + totalDiscretionary + totalCustomExpenses).toLocaleString()}</span>
+                  <span className="font-medium">${(totalCreditCards + totalEssentials + totalCustomExpenses).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between border-t pt-1 font-semibold">
                   <span>Net Cash Flow:</span>
@@ -901,7 +867,7 @@ const FinancialTracker = () => {
       </div>
 
       {/* Instructions */}
-      <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+      {/* <div className="mt-6 p-4 bg-blue-50 rounded-lg">
         <h4 className="font-semibold text-blue-800 mb-2">How to Use This Enhanced Framework:</h4>
         <ul className="text-sm text-blue-700 space-y-1">
           <li>• <strong>Settings:</strong> Click the Settings button to configure your default salary and automatic deductions.</li>
@@ -913,7 +879,7 @@ const FinancialTracker = () => {
           <li>• <strong>Investment Allocation:</strong> Track monthly contributions to each of your investment accounts.</li>
           <li>• <strong>Goal:</strong> Aim for positive net cash flow and 20%+ total investment rate across all accounts.</li>
         </ul>
-      </div>
+      </div> */}
     </div>
   );
 };

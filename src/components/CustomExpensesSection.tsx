@@ -27,10 +27,20 @@ const CustomExpensesSection: React.FC<CustomExpensesSectionProps> = React.memo((
   onRemoveCustomExpense,
   onUpdateCustomExpense,
   totalCustomExpenses
-}) => (
+}) => {
+  const categoryOptions = [
+    'dining out',
+    'entertainment', 
+    'shopping',
+    'subscriptions',
+    'travel',
+    'other'
+  ];
+
+  return (
   <div className="mb-6">
     <h3 className="text-lg font-semibold p-3 bg-orange-100 border-b">
-      📝 Itemized Custom Expenses
+      📝 Itemized Discretionary Expenses
     </h3>
     <div className="bg-orange-50 p-3 text-sm text-orange-900 font-medium border-b">
       <p><strong>Add specific expenses:</strong> Create custom categories and itemize individual purchases for detailed tracking.</p>
@@ -39,14 +49,19 @@ const CustomExpensesSection: React.FC<CustomExpensesSectionProps> = React.memo((
     {/* Add new expense form */}
     <div className="grid grid-cols-12 gap-2 p-3 bg-gray-50 border-b">
       <div className="col-span-3">
-        <input
-          type="text"
+        <select
           value={newExpense.category}
           onChange={(e) => onNewExpenseChange('category', e.target.value)}
           className="w-full px-2 py-1 text-sm font-semibold text-gray-900 border rounded"
-          placeholder="Category (e.g., Dining)"
           id="new-expense-category"
-        />
+        >
+          <option value="">Select Category</option>
+          {categoryOptions.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
       </div>
       <div className="col-span-4">
         <input
@@ -91,13 +106,19 @@ const CustomExpensesSection: React.FC<CustomExpensesSectionProps> = React.memo((
         {customExpenses.map((expense) => (
           <div key={`expense-${expense.id}`} className="grid grid-cols-12 gap-2 p-2 border-b hover:bg-gray-50">
             <div className="col-span-3">
-              <input
-                type="text"
+              <select
                 value={expense.category}
                 onChange={(e) => onUpdateCustomExpense(expense.id, 'category', e.target.value)}
                 className="w-full px-2 py-1 text-sm font-semibold text-gray-900 border rounded"
                 id={`expense-category-${expense.id}`}
-              />
+              >
+                <option value="">Select Category</option>
+                {categoryOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="col-span-4">
               <input
@@ -138,7 +159,8 @@ const CustomExpensesSection: React.FC<CustomExpensesSectionProps> = React.memo((
       </div>
     </div>
   </div>
-));
+  );
+});
 
 CustomExpensesSection.displayName = 'CustomExpensesSection';
 
