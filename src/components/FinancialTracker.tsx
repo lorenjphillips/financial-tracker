@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { DollarSign, Plus, Minus, X, Settings, Save, Calendar, Archive, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Settings, Save, Calendar, Archive, Download, ChevronLeft, ChevronRight, Upload, HardDrive } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import jsPDF from 'jspdf';
+import { generateFinancialPDF } from '../utils/pdfExport';
+import TableSection from './TableSection';
+import AutoDeductionsSection from './AutoDeductionsSection';
+import VenmoSection from './VenmoSection';
+import CustomExpensesSection from './CustomExpensesSection';
+import SummaryCards from './SummaryCards';
 
 interface MonthlyData {
   income: {
@@ -376,86 +381,73 @@ const FinancialTracker = () => {
 
   // PDF Export functionality
   const generatePDF = async () => {
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
-    
-    // Header
-    pdf.setFontSize(20);
-    pdf.text('Financial Summary Report', pageWidth / 2, 20, { align: 'center' });
-    pdf.setFontSize(14);
-    pdf.text(`Month: ${format(parseISO(currentMonthYear + '-01'), 'MMMM yyyy')}`, pageWidth / 2, 30, { align: 'center' });
-    
-    let yPosition = 45;
-    
-    // Summary section
-    pdf.setFontSize(16);
-    pdf.text('Financial Summary', 20, yPosition);
-    yPosition += 10;
-    
-    pdf.setFontSize(12);
-    pdf.text(`Total Income: $${totalIncome.toLocaleString()}`, 20, yPosition);
-    yPosition += 6;
-    pdf.text(`Total Outflows: $${totalOutflows.toLocaleString()}`, 20, yPosition);
-    yPosition += 6;
-    pdf.text(`Net Cash Flow: $${netCashFlow.toLocaleString()}`, 20, yPosition);
-    yPosition += 6;
-    pdf.text(`Investment Rate: ${totalIncome > 0 ? ((totalInvestments / totalIncome) * 100).toFixed(1) : 0}%`, 20, yPosition);
-    yPosition += 6;
-    pdf.text(`Savings Rate: ${totalIncome > 0 ? ((totalSavings / totalIncome) * 100).toFixed(1) : 0}%`, 20, yPosition);
-    yPosition += 15;
-    
-    // Categories breakdown
-    const categories = [
-      { name: 'Income', total: totalIncome, items: monthlyData.income },
-      { name: 'Investments', total: totalInvestments, items: monthlyData.investments },
-      { name: 'Savings', total: totalSavings, items: monthlyData.savings },
-      { name: 'Credit Cards', total: totalCreditCards, items: monthlyData.creditCards },
-      { name: 'Essentials', total: totalEssentials, items: monthlyData.essentials },
-      { name: 'Discretionary', total: totalDiscretionary, items: monthlyData.discretionary }
-    ];
-    
-    for (const category of categories) {
-      if (yPosition > pageHeight - 30) {
-        pdf.addPage();
-        yPosition = 20;
+    const pdfData = {
+      currentMonthYear,
+      monthlyData,
+      customExpenses,
+      totals: {
+        totalIncome,
+        totalOutflows,
+        netCashFlow,
+        totalInvestments,
+        totalSavings,
+        totalCreditCards,
+        totalEssentials,
+        totalDiscretionary,
+        totalCustomExpenses
       }
-      
-      pdf.setFontSize(14);
-      pdf.text(`${category.name}: $${category.total.toLocaleString()}`, 20, yPosition);
-      yPosition += 8;
-      
-      pdf.setFontSize(10);
-      Object.entries(category.items).forEach(([key, value]) => {
-        if (typeof value === 'number' && value > 0) {
-          const displayName = key.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1');
-          pdf.text(`  ${displayName}: $${value.toLocaleString()}`, 25, yPosition);
-          yPosition += 5;
+    };
+    
+    await generateFinancialPDF(pdfData);
+  };
+
+  // Data backup and restore functions
+  const exportData = () => {
+    const dataToExport = {
+      savedMonths,
+      defaultConfig,
+      exportDate: new Date().toISOString(),
+      version: '1.0'
+    };
+    
+    const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `financial-tracker-backup-${format(new Date(), 'yyyy-MM-dd')}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const importData = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const importedData = JSON.parse(e.target?.result as string);
+        
+        if (importedData.savedMonths && Array.isArray(importedData.savedMonths)) {
+          setSavedMonths(importedData.savedMonths);
         }
-      });
-      yPosition += 5;
-    }
-    
-    // Custom expenses
-    if (customExpenses.length > 0) {
-      if (yPosition > pageHeight - 40) {
-        pdf.addPage();
-        yPosition = 20;
+        
+        if (importedData.defaultConfig) {
+          setDefaultConfig(importedData.defaultConfig);
+        }
+        
+        alert('Data imported successfully!');
+      } catch (error) {
+        alert('Error importing data. Please check the file format.');
+        console.error('Import error:', error);
       }
-      
-      pdf.setFontSize(14);
-      pdf.text(`Custom Expenses: $${totalCustomExpenses.toLocaleString()}`, 20, yPosition);
-      yPosition += 8;
-      
-      pdf.setFontSize(10);
-      customExpenses.forEach(expense => {
-        pdf.text(`  ${expense.category} - ${expense.name}: $${expense.amount.toLocaleString()}`, 25, yPosition);
-        yPosition += 5;
-      });
-    }
+    };
+    reader.readAsText(file);
     
-    // Save the PDF
-    pdf.save(`financial-summary-${currentMonthYear}.pdf`);
+    // Reset the input
+    event.target.value = '';
   };
 
   // Calculate totals
@@ -680,239 +672,18 @@ const FinancialTracker = () => {
     </div>
   );
 
-  const TableSection = ({ title, data, category, bgColor = "bg-gray-50" }: { title: string; data: Record<string, number>; category: string; bgColor?: string }) => (
-    <div className="mb-6">
-      <h3 className={`text-lg font-semibold p-3 ${bgColor} border-b`}>{title}</h3>
-      {Object.entries(data).map(([key, value]) => (
-        <div key={key} className="grid grid-cols-3 gap-4 p-2 border-b hover:bg-gray-25">
-          <div className="flex items-center">
-            <span className="text-sm capitalize">
-              {key.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1')}
-            </span>
-          </div>
-          <div>
-            <input
-              type="number"
-              value={value || ''}
-              onChange={(e) => updateValue(category, key, e.target.value)}
-              className="w-full px-2 py-1 text-sm border rounded"
-              placeholder="0"
-              step="0.01"
-            />
-          </div>
-          <div className="text-sm font-medium text-right">
-            ${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+  // Component removed - using modular TableSection component
 
-  const AutoDeductionsSection = () => (
-    <div className="mb-6">
-      <h3 className="text-lg font-semibold p-3 bg-blue-100 border-b">
-        🏦 Automatic Deductions (Pre-tax/Benefits from Paycheck)
-      </h3>
-      <div className="bg-blue-25 p-3 text-sm text-blue-800 border-b">
-        <p><strong>Note:</strong> These are automatically deducted from your gross pay before you receive your paycheck. 
-        Update amounts and descriptions to match your actual deductions. Your net pay already reflects these deductions.</p>
-      </div>
-      {Object.entries(monthlyData.automaticDeductions).map(([key, data]) => (
-        <div key={key} className="border-b hover:bg-gray-25">
-          <div className="grid grid-cols-12 gap-2 p-3">
-            <div className="col-span-3 flex items-center">
-              <span className="text-sm font-medium capitalize">
-                {key.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1')}
-              </span>
-            </div>
-            <div className="col-span-2">
-              <input
-                type="number"
-                value={data.amount || ''}
-                onChange={(e) => updateDeductionAmount(key, e.target.value)}
-                className="w-full px-2 py-1 text-sm border rounded"
-                placeholder="0"
-                step="0.01"
-              />
-            </div>
-            <div className="col-span-2 text-sm font-medium text-right flex items-center">
-              ${data.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </div>
-            <div className="col-span-5">
-              <input
-                type="text"
-                value={data.description}
-                onChange={(e) => updateDeductionDescription(key, e.target.value)}
-                className="w-full px-2 py-1 text-xs border rounded text-gray-600"
-                placeholder="Description of this deduction..."
-              />
-            </div>
-          </div>
-        </div>
-      ))}
-      <div className="bg-gray-100 p-3">
-        <div className="flex justify-between font-semibold">
-          <span>Total Automatic Deductions:</span>
-          <span>${totalAutomaticDeductions.toLocaleString()}</span>
-        </div>
-      </div>
-    </div>
-  );
+  // Component removed - using modular AutoDeductionsSection component
 
-  const VenmoSection = () => (
-    <div className="mb-6">
-      <h3 className="text-lg font-semibold p-3 bg-green-100 border-b">
-        💸 Venmo Cash Flow
-      </h3>
-      <div className="bg-green-25 p-3 text-sm text-green-800 border-b">
-        <p><strong>Track Venmo activity:</strong> Positive values are money coming in (cashouts, payments received). 
-        Negative values are money going out (payments to others).</p>
-      </div>
-      {Object.entries(monthlyData.venmo).map(([key, value]) => (
-        <div key={key} className="grid grid-cols-3 gap-4 p-2 border-b hover:bg-gray-25">
-          <div className="flex items-center">
-            <span className="text-sm capitalize">
-              {key.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1')}
-            </span>
-          </div>
-          <div>
-            <input
-              type="number"
-              value={value || ''}
-              onChange={(e) => updateValue('venmo', key, e.target.value)}
-              className="w-full px-2 py-1 text-sm border rounded"
-              placeholder="0"
-              step="0.01"
-            />
-          </div>
-          <div className={`text-sm font-medium text-right ${value >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {value >= 0 ? '+' : ''}${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-          </div>
-        </div>
-      ))}
-      <div className="bg-gray-100 p-3">
-        <div className="flex justify-between font-semibold">
-          <span>Net Venmo Flow:</span>
-          <span className={totalVenmo >= 0 ? 'text-green-600' : 'text-red-600'}>
-            {totalVenmo >= 0 ? '+' : ''}${totalVenmo.toLocaleString()}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
+  // Component removed - using modular VenmoSection component
 
-  const CustomExpensesSection = () => (
-    <div className="mb-6">
-      <h3 className="text-lg font-semibold p-3 bg-orange-100 border-b">
-        📝 Itemized Custom Expenses
-      </h3>
-      <div className="bg-orange-25 p-3 text-sm text-orange-800 border-b">
-        <p><strong>Add specific expenses:</strong> Create custom categories and itemize individual purchases for detailed tracking.</p>
-      </div>
-      
-      {/* Add new expense form */}
-      <div className="grid grid-cols-12 gap-2 p-3 bg-gray-50 border-b">
-        <div className="col-span-3">
-          <input
-            type="text"
-            value={newExpense.category}
-            onChange={(e) => setNewExpense(prev => ({ ...prev, category: e.target.value }))}
-            className="w-full px-2 py-1 text-sm border rounded"
-            placeholder="Category (e.g., Dining)"
-          />
-        </div>
-        <div className="col-span-4">
-          <input
-            type="text"
-            value={newExpense.name}
-            onChange={(e) => setNewExpense(prev => ({ ...prev, name: e.target.value }))}
-            className="w-full px-2 py-1 text-sm border rounded"
-            placeholder="Expense name (e.g., Starbucks)"
-          />
-        </div>
-        <div className="col-span-2">
-          <input
-            type="number"
-            value={newExpense.amount || ''}
-            onChange={(e) => setNewExpense(prev => ({ ...prev, amount: parseFloat(e.target.value) || 0 }))}
-            className="w-full px-2 py-1 text-sm border rounded"
-            placeholder="Amount"
-            step="0.01"
-          />
-        </div>
-        <div className="col-span-2">
-          <button
-            onClick={addCustomExpense}
-            className="w-full bg-blue-500 text-white px-3 py-1 text-sm rounded hover:bg-blue-600 flex items-center justify-center"
-          >
-            <Plus size={14} className="mr-1" />
-            Add
-          </button>
-        </div>
-        <div className="col-span-1"></div>
-      </div>
+  // Component removed - using modular CustomExpensesSection component
 
-      {/* Existing expenses */}
-      {customExpenses.length > 0 && (
-        <div>
-          <div className="grid grid-cols-12 gap-2 p-2 bg-gray-100 border-b text-sm font-semibold">
-            <div className="col-span-3">Category</div>
-            <div className="col-span-4">Expense Name</div>
-            <div className="col-span-2">Amount</div>
-            <div className="col-span-2">Formatted</div>
-            <div className="col-span-1">Action</div>
-          </div>
-          {customExpenses.map((expense) => (
-            <div key={expense.id} className="grid grid-cols-12 gap-2 p-2 border-b hover:bg-gray-25">
-              <div className="col-span-3">
-                <input
-                  type="text"
-                  value={expense.category}
-                  onChange={(e) => updateCustomExpense(expense.id, 'category', e.target.value)}
-                  className="w-full px-2 py-1 text-sm border rounded"
-                />
-              </div>
-              <div className="col-span-4">
-                <input
-                  type="text"
-                  value={expense.name}
-                  onChange={(e) => updateCustomExpense(expense.id, 'name', e.target.value)}
-                  className="w-full px-2 py-1 text-sm border rounded"
-                />
-              </div>
-              <div className="col-span-2">
-                <input
-                  type="number"
-                  value={expense.amount || ''}
-                  onChange={(e) => updateCustomExpense(expense.id, 'amount', e.target.value)}
-                  className="w-full px-2 py-1 text-sm border rounded"
-                  step="0.01"
-                />
-              </div>
-              <div className="col-span-2 text-sm font-medium text-right flex items-center">
-                ${expense.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </div>
-              <div className="col-span-1 flex items-center">
-                <button
-                  onClick={() => removeCustomExpense(expense.id)}
-                  className="text-red-500 hover:text-red-700"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-      
-      <div className="bg-gray-100 p-3">
-        <div className="flex justify-between font-semibold">
-          <span>Total Custom Expenses:</span>
-          <span>${totalCustomExpenses.toLocaleString()}</span>
-        </div>
-      </div>
-    </div>
-  );
+  // Custom expense handlers
+  const handleNewExpenseChange = (field: string, value: string | number) => {
+    setNewExpense(prev => ({ ...prev, [field]: value }));
+  };
 
   return (
     <div className="max-w-6xl mx-auto p-6 bg-white">
@@ -941,6 +712,24 @@ const FinancialTracker = () => {
               <Archive size={16} className="mr-2" />
               Archive
             </button>
+            <button
+              onClick={exportData}
+              className="bg-purple-100 hover:bg-purple-200 text-purple-700 px-4 py-2 rounded-lg flex items-center"
+              title="Export all data as JSON backup file"
+            >
+              <HardDrive size={16} className="mr-2" />
+              Backup
+            </button>
+            <label className="bg-orange-100 hover:bg-orange-200 text-orange-700 px-4 py-2 rounded-lg flex items-center cursor-pointer">
+              <Upload size={16} className="mr-2" />
+              Restore
+              <input
+                type="file"
+                accept=".json"
+                onChange={importData}
+                className="hidden"
+              />
+            </label>
           </div>
         </div>
 
@@ -989,33 +778,11 @@ const FinancialTracker = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-green-50 p-4 rounded-lg border">
-          <h3 className="text-green-800 font-semibold flex items-center">
-            <Plus className="mr-2" size={16} />
-            Total Income
-          </h3>
-          <p className="text-2xl font-bold text-green-900">${totalIncome.toLocaleString()}</p>
-        </div>
-        
-        <div className="bg-red-50 p-4 rounded-lg border">
-          <h3 className="text-red-800 font-semibold flex items-center">
-            <Minus className="mr-2" size={16} />
-            Total Outflows
-          </h3>
-          <p className="text-2xl font-bold text-red-900">${totalOutflows.toLocaleString()}</p>
-        </div>
-        
-        <div className={`${netCashFlow >= 0 ? 'bg-blue-50' : 'bg-orange-50'} p-4 rounded-lg border`}>
-          <h3 className={`${netCashFlow >= 0 ? 'text-blue-800' : 'text-orange-800'} font-semibold flex items-center`}>
-            <DollarSign className="mr-2" size={16} />
-            Net Cash Flow
-          </h3>
-          <p className={`text-2xl font-bold ${netCashFlow >= 0 ? 'text-blue-900' : 'text-orange-900'}`}>
-            ${netCashFlow.toLocaleString()}
-          </p>
-        </div>
-      </div>
+      <SummaryCards 
+        totalIncome={totalIncome}
+        totalOutflows={totalOutflows}
+        netCashFlow={netCashFlow}
+      />
 
       {/* Main Tracking Table */}
       <div className="bg-white border rounded-lg overflow-hidden">
@@ -1031,13 +798,23 @@ const FinancialTracker = () => {
           data={monthlyData.income} 
           category="income"
           bgColor="bg-green-100"
+          onUpdate={updateValue}
         />
 
         {/* Automatic Deductions - Special handling */}
-        <AutoDeductionsSection />
+        <AutoDeductionsSection 
+          automaticDeductions={monthlyData.automaticDeductions}
+          onUpdateAmount={updateDeductionAmount}
+          onUpdateDescription={updateDeductionDescription}
+          totalAutomaticDeductions={totalAutomaticDeductions}
+        />
 
         {/* Venmo Section - Special handling */}
-        <VenmoSection />
+        <VenmoSection 
+          venmoData={monthlyData.venmo}
+          onUpdate={updateValue}
+          totalVenmo={totalVenmo}
+        />
 
         {/* Investment Accounts */}
         <TableSection 
@@ -1045,6 +822,7 @@ const FinancialTracker = () => {
           data={monthlyData.investments} 
           category="investments"
           bgColor="bg-purple-100"
+          onUpdate={updateValue}
         />
 
         {/* Savings Accounts */}
@@ -1053,6 +831,7 @@ const FinancialTracker = () => {
           data={monthlyData.savings} 
           category="savings"
           bgColor="bg-emerald-100"
+          onUpdate={updateValue}
         />
 
         {/* Credit Card Spending */}
@@ -1061,6 +840,7 @@ const FinancialTracker = () => {
           data={monthlyData.creditCards} 
           category="creditCards"
           bgColor="bg-yellow-100"
+          onUpdate={updateValue}
         />
 
         {/* Essential Expenses */}
@@ -1069,6 +849,7 @@ const FinancialTracker = () => {
           data={monthlyData.essentials} 
           category="essentials"
           bgColor="bg-red-100"
+          onUpdate={updateValue}
         />
 
         {/* Discretionary Spending */}
@@ -1077,10 +858,19 @@ const FinancialTracker = () => {
           data={monthlyData.discretionary} 
           category="discretionary"
           bgColor="bg-pink-100"
+          onUpdate={updateValue}
         />
 
         {/* Custom Expenses Section */}
-        <CustomExpensesSection />
+        <CustomExpensesSection 
+          customExpenses={customExpenses}
+          newExpense={newExpense}
+          onNewExpenseChange={handleNewExpenseChange}
+          onAddCustomExpense={addCustomExpense}
+          onRemoveCustomExpense={removeCustomExpense}
+          onUpdateCustomExpense={updateCustomExpense}
+          totalCustomExpenses={totalCustomExpenses}
+        />
 
         {/* Summary Row */}
         <div className="bg-gray-200 p-4 border-t-2">
@@ -1169,7 +959,9 @@ const FinancialTracker = () => {
         <ul className="text-sm text-blue-700 space-y-1">
           <li>• <strong>Settings:</strong> Click the Settings button to configure your default salary and automatic deductions.</li>
           <li>• <strong>Auto Deductions:</strong> Edit amounts and descriptions to match your actual paycheck deductions.</li>
-          <li>• <strong>Venmo Tracking:</strong> Use positive values for money coming in, negative for money going out.</li>
+          <li>• <strong>Month Navigation:</strong> Use Previous/Next buttons to navigate between months. Data auto-saves to browser storage.</li>
+          <li>• <strong>Data Storage:</strong> All data is stored locally in your browser (localStorage). Use Backup/Restore for file backups.</li>
+          <li>• <strong>Archive:</strong> View all saved months with key metrics and options to edit, export PDFs, or delete.</li>
           <li>• <strong>Custom Expenses:</strong> Add specific purchases with categories for detailed tracking (e.g., &ldquo;Dining - Starbucks - $15.50&rdquo;).</li>
           <li>• <strong>Investment Allocation:</strong> Track monthly contributions to each of your investment accounts.</li>
           <li>• <strong>Goal:</strong> Aim for positive net cash flow and 20%+ total investment rate across all accounts.</li>
