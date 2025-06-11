@@ -72,7 +72,7 @@ Monitor non-essential spending in fixed categories:
 
 ### 📝 Custom Itemized Expenses
 - **Dynamic Expense Creation**: Add custom categories and specific purchases
-- **Detailed Tracking**: Track individual transactions (e.g., "Dining - Starbucks - $15.50")
+- **Detailed Tracking**: Track individual transactions (e.g., "Dining - Starbucks")
 - **Flexible Categories**: Create your own expense categories
 - **Real-time Updates**: Instant calculation updates as you add/remove expenses
 

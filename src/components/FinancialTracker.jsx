@@ -18,31 +18,42 @@ const FinancialTracker = () => {
     return format(now, 'yyyy-MM');
   });
   const [savedMonths, setSavedMonths] = useState([]);
-  const [defaultConfig, setDefaultConfig] = useState({
-    primarySalary: 6859,
-    automaticDeductions: {
-      '401k_contribution': { amount: 442, description: '4% of gross salary with employer match' },
-      'hsa_contribution': { amount: 72, description: 'Health Savings Account - triple tax advantaged' },
-      'cigna_insurance': { amount: 32, description: 'Cigna accident/injury insurance coverage' },
-      'health_insurance': { amount: 0, description: 'Medical/dental/vision insurance premiums' },
-      'life_insurance': { amount: 0, description: 'Company life insurance premiums' },
-      'disability_insurance': { amount: 0, description: 'Short/long term disability coverage' },
-      'parking_transit': { amount: 0, description: 'Pre-tax parking or transit benefits' },
-      'dependent_care_fsa': { amount: 0, description: 'Dependent Care Flexible Spending Account' },
-      'other_pretax': { amount: 155, description: 'Other pre-tax deductions (specify in description)' }
-    }
-  });
+
 
   const [monthlyData, setMonthlyData] = useState({
-    // Income Sources
-    income: {
-      primarySalary: defaultConfig.primarySalary,
+    // Payroll Details (Biweekly) - Input Fields
+    payroll: {
+      // Gross Income
+      grossPay: 0.00,
+      
+      // Tax Deductions
+      federalWithholding: 0.00,
+      stateTaxCA: 0.00,
+      oasdiSocialSecurity: 0.00,
+      medicare: 0.00,
+      caSDI: 0.00,
+      
+      // Pre-tax Deductions (formerly automatic deductions)
+      contribution401k: 0.00,
+      hsaContribution: 0.00,
+      healthInsurance: 0.00,
+      lifeInsurance: 0.00,
+      disabilityInsurance: 0.00,
+      parkingTransit: 0.00,
+      dependentCareFSA: 0.00,
+      otherPretax: 0.00,
+      
+      // Other Post-tax Deductions
+      generalDeductions: 0.00,
+      employeePostTaxDeductions: 0.00
+    },
+
+    // Additional Income Sources (beyond primary payroll)
+    additionalIncome: {
       businessIncome: 0,
+      freelanceIncome: 0,
       otherIncome: 0
     },
-    
-    // Automatic Deductions (from paycheck) - All editable
-    automaticDeductions: { ...defaultConfig.automaticDeductions },
     
     // Investment Accounts
     investments: {
@@ -128,75 +139,7 @@ const FinancialTracker = () => {
     }));
   };
 
-  const updateDeductionAmount = (key, amount) => {
-    setMonthlyData(prev => ({
-      ...prev,
-      automaticDeductions: {
-        ...prev.automaticDeductions,
-        [key]: {
-          ...prev.automaticDeductions[key],
-          amount: parseFloat(amount) || 0
-        }
-      }
-    }));
-  };
 
-  const updateDeductionDescription = (key, description) => {
-    setMonthlyData(prev => ({
-      ...prev,
-      automaticDeductions: {
-        ...prev.automaticDeductions,
-        [key]: {
-          ...prev.automaticDeductions[key],
-          description: description
-        }
-      }
-    }));
-  };
-
-  const updateDefaultConfig = (category, key, field, value) => {
-    if (category === 'primarySalary') {
-      setDefaultConfig(prev => ({
-        ...prev,
-        primarySalary: parseFloat(value) || 0
-      }));
-    } else if (category === 'automaticDeductions') {
-      setDefaultConfig(prev => ({
-        ...prev,
-        automaticDeductions: {
-          ...prev.automaticDeductions,
-          [key]: {
-            ...prev.automaticDeductions[key],
-            [field]: field === 'amount' ? parseFloat(value) || 0 : value
-          }
-        }
-      }));
-    }
-  };
-
-  const applyDefaultConfig = () => {
-    setMonthlyData(prev => ({
-      ...prev,
-      income: {
-        ...prev.income,
-        primarySalary: defaultConfig.primarySalary
-      },
-      automaticDeductions: { ...defaultConfig.automaticDeductions }
-    }));
-    setShowSettings(false);
-  };
-
-  const resetToDefaults = () => {
-    setMonthlyData(prev => ({
-      ...prev,
-      income: {
-        primarySalary: defaultConfig.primarySalary,
-        businessIncome: 0,
-        otherIncome: 0
-      },
-      automaticDeductions: { ...defaultConfig.automaticDeductions }
-    }));
-  };
 
   const addCustomExpense = () => {
     if (newExpense.category && newExpense.name && newExpense.amount) {
@@ -224,12 +167,29 @@ const FinancialTracker = () => {
     } else {
       // Reset to defaults for new month
       setMonthlyData({
-        income: {
-          primarySalary: defaultConfig.primarySalary,
+        payroll: {
+          grossPay: 0.00,
+          federalWithholding: 0.00,
+          stateTaxCA: 0.00,
+          oasdiSocialSecurity: 0.00,
+          medicare: 0.00,
+          caSDI: 0.00,
+          contribution401k: 0.00,
+          hsaContribution: 0.00,
+          healthInsurance: 0.00,
+          lifeInsurance: 0.00,
+          disabilityInsurance: 0.00,
+          parkingTransit: 0.00,
+          dependentCareFSA: 0.00,
+          otherPretax: 0.00,
+          generalDeductions: 0.00,
+          employeePostTaxDeductions: 0.00
+        },
+        additionalIncome: {
           businessIncome: 0,
+          freelanceIncome: 0,
           otherIncome: 0
         },
-        automaticDeductions: { ...defaultConfig.automaticDeductions },
         investments: {
           fidelity: 0,
           vanguard: 0,
@@ -319,7 +279,16 @@ const FinancialTracker = () => {
       monthlyData,
       customExpenses,
       totals: {
-        totalIncome,
+        totalIncome: totalMonthlyIncome, // Keep the old name for PDF compatibility
+        totalMonthlyIncome,
+        monthlyGrossPay,
+        biweeklyGrossPay,
+        biweeklyNetPay,
+        monthlyNetPay,
+        totalTaxDeductions,
+        totalPretaxDeductions,
+        totalOtherDeductions,
+        totalAdditionalIncome,
         totalOutflows,
         netCashFlow,
         totalInvestments,
@@ -338,7 +307,6 @@ const FinancialTracker = () => {
   const exportData = () => {
     const dataToExport = {
       savedMonths,
-      defaultConfig,
       exportDate: new Date().toISOString(),
       version: '1.0'
     };
@@ -367,10 +335,6 @@ const FinancialTracker = () => {
           setSavedMonths(importedData.savedMonths);
         }
         
-        if (importedData.defaultConfig) {
-          setDefaultConfig(importedData.defaultConfig);
-        }
-        
         alert('Data imported successfully!');
       } catch (error) {
         alert('Error importing data. Please check the file format.');
@@ -388,9 +352,42 @@ const FinancialTracker = () => {
     setNewExpense(prev => ({ ...prev, [field]: value }));
   };
 
-  // Calculate totals
-  const totalIncome = Object.values(monthlyData.income).reduce((sum, val) => sum + val, 0);
-  const totalAutomaticDeductions = Object.values(monthlyData.automaticDeductions).reduce((sum, val) => sum + val.amount, 0);
+  // Calculate payroll totals
+  const biweeklyGrossPay = monthlyData.payroll.grossPay;
+  const monthlyGrossPay = biweeklyGrossPay * 2.17; // Standard payroll calculation
+  
+  // Tax deductions
+  const totalTaxDeductions = monthlyData.payroll.federalWithholding + 
+                            monthlyData.payroll.stateTaxCA + 
+                            monthlyData.payroll.oasdiSocialSecurity + 
+                            monthlyData.payroll.medicare + 
+                            monthlyData.payroll.caSDI;
+  
+  // Pre-tax deductions  
+  const totalPretaxDeductions = monthlyData.payroll.contribution401k +
+                               monthlyData.payroll.hsaContribution +
+                               monthlyData.payroll.healthInsurance +
+                               monthlyData.payroll.lifeInsurance +
+                               monthlyData.payroll.disabilityInsurance +
+                               monthlyData.payroll.parkingTransit +
+                               monthlyData.payroll.dependentCareFSA +
+                               monthlyData.payroll.otherPretax;
+  
+  // Other deductions
+  const totalOtherDeductions = monthlyData.payroll.generalDeductions + 
+                              monthlyData.payroll.employeePostTaxDeductions;
+  
+  // Calculate net pay
+  const biweeklyNetPay = biweeklyGrossPay - totalTaxDeductions - totalPretaxDeductions - totalOtherDeductions;
+  const monthlyNetPay = biweeklyNetPay * 2.17;
+  
+  // Additional income
+  const totalAdditionalIncome = Object.values(monthlyData.additionalIncome).reduce((sum, val) => sum + val, 0);
+  
+  // Total monthly income
+  const totalMonthlyIncome = monthlyNetPay + totalAdditionalIncome;
+  
+  // Other totals
   const totalInvestments = Object.values(monthlyData.investments).reduce((sum, val) => sum + val, 0);
   const totalSavings = Object.values(monthlyData.savings).reduce((sum, val) => sum + val, 0);
   const totalVenmo = Object.values(monthlyData.venmo).reduce((sum, val) => sum + val, 0);
@@ -399,12 +396,11 @@ const FinancialTracker = () => {
   const totalDiscretionary = Object.values(monthlyData.discretionary).reduce((sum, val) => sum + val, 0);
   const totalCustomExpenses = customExpenses.reduce((sum, expense) => sum + expense.amount, 0);
   
-  const totalOutflows = totalAutomaticDeductions + totalInvestments + totalSavings + Math.abs(totalVenmo) + totalCreditCards + totalEssentials + totalDiscretionary + totalCustomExpenses;
-  const netCashFlow = totalIncome - totalOutflows;
+  const totalOutflows = totalInvestments + totalSavings + Math.abs(totalVenmo) + totalCreditCards + totalEssentials + totalDiscretionary + totalCustomExpenses;
+  const netCashFlow = totalMonthlyIncome - totalOutflows;
 
   // Prepare spending chart data
   const spendingCategories = [
-    { name: 'Automatic Deductions', amount: totalAutomaticDeductions, color: '#3b82f6' },
     { name: 'Investments', amount: totalInvestments, color: '#8b5cf6' },
     { name: 'Savings', amount: totalSavings, color: '#10b981' },
     { name: 'Credit Cards', amount: totalCreditCards, color: '#f59e0b' },
@@ -418,10 +414,10 @@ const FinancialTracker = () => {
   const SettingsModal = () => (
     <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 ${showSettings ? 'block' : 'hidden'}`}>
       <div className="flex items-center justify-center min-h-screen p-4">
-        <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="bg-white rounded-lg shadow-xl max-w-lg w-full">
           <div className="p-6">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">Configuration Settings</h2>
+              <h2 className="text-2xl font-bold">💼 Payroll-Based Tracking</h2>
               <button
                 onClick={() => setShowSettings(false)}
                 className="text-gray-500 hover:text-gray-700"
@@ -430,81 +426,34 @@ const FinancialTracker = () => {
               </button>
             </div>
             
-            {/* Primary Salary Configuration */}
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-3 text-green-800">Default Primary Salary</h3>
+            <div className="space-y-4">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-blue-800 mb-2">How This Works</h3>
+                <ul className="text-sm text-blue-700 space-y-1">
+                  <li>• Enter your actual <strong>biweekly payroll details</strong> from your pay stub</li>
+                  <li>• Include gross pay, taxes, and all deductions</li>
+                  <li>• Net income is <strong>calculated automatically</strong></li>
+                  <li>• Monthly amounts use the standard 2.17 multiplier</li>
+                </ul>
+              </div>
+              
               <div className="bg-green-50 p-4 rounded-lg">
-                <label className="block text-sm font-medium mb-2">Monthly Primary Salary</label>
-                <input
-                  type="number"
-                  value={defaultConfig.primarySalary}
-                  onChange={(e) => updateDefaultConfig('primarySalary', null, null, e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg"
-                  placeholder="Enter your monthly salary"
-                  step="0.01"
-                />
+                <h3 className="font-semibold text-green-800 mb-2">Benefits</h3>
+                <ul className="text-sm text-green-700 space-y-1">
+                  <li>• More accurate than manual entry</li>
+                  <li>• Matches your actual take-home pay</li>
+                  <li>• Shows effective tax rate</li>
+                  <li>• Proper payroll-to-monthly conversion</li>
+                </ul>
               </div>
             </div>
 
-            {/* Automatic Deductions Configuration */}
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold mb-3 text-blue-800">Default Automatic Deductions</h3>
-              <div className="bg-blue-50 p-4 rounded-lg space-y-4">
-                {Object.entries(defaultConfig.automaticDeductions).map(([key, data]) => (
-                  <div key={key} className="grid grid-cols-12 gap-3 p-3 bg-white rounded border">
-                    <div className="col-span-3 flex items-center">
-                      <span className="text-sm font-medium capitalize">
-                        {key.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1')}
-                      </span>
-                    </div>
-                    <div className="col-span-2">
-                      <input
-                        type="number"
-                        value={data.amount}
-                        onChange={(e) => updateDefaultConfig('automaticDeductions', key, 'amount', e.target.value)}
-                        className="w-full px-2 py-1 text-sm border rounded"
-                        placeholder="Amount"
-                        step="0.01"
-                      />
-                    </div>
-                    <div className="col-span-2 text-sm font-medium text-right flex items-center">
-                      ${data.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </div>
-                    <div className="col-span-5">
-                      <input
-                        type="text"
-                        value={data.description}
-                        onChange={(e) => updateDefaultConfig('automaticDeductions', key, 'description', e.target.value)}
-                        className="w-full px-2 py-1 text-xs border rounded"
-                        placeholder="Description..."
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex justify-between">
-              <div className="space-x-3">
-                <button
-                  onClick={applyDefaultConfig}
-                  className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600"
-                >
-                  Apply Configuration
-                </button>
-                <button
-                  onClick={resetToDefaults}
-                  className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600"
-                >
-                  Reset Current Values
-                </button>
-              </div>
+            <div className="flex justify-center mt-6">
               <button
                 onClick={() => setShowSettings(false)}
-                className="bg-gray-300 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-400"
+                className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600"
               >
-                Close
+                Got it!
               </button>
             </div>
           </div>
@@ -535,14 +484,32 @@ const FinancialTracker = () => {
                 savedMonths
                   .sort((a, b) => b.monthYear.localeCompare(a.monthYear))
                   .map((month) => {
-                    const monthIncome = Object.values(month.data.income).reduce((sum, val) => sum + val, 0);
-                    const monthOutflows = Object.values(month.data.automaticDeductions).reduce((sum, val) => sum + val.amount, 0) +
-                                        Object.values(month.data.investments).reduce((sum, val) => sum + val, 0) +
-                                        Object.values(month.data.savings).reduce((sum, val) => sum + val, 0) +
-                                        Object.values(month.data.creditCards).reduce((sum, val) => sum + val, 0) +
-                                        Object.values(month.data.essentials).reduce((sum, val) => sum + val, 0) +
-                                        Object.values(month.data.discretionary).reduce((sum, val) => sum + val, 0) +
-                                        month.customExpenses.reduce((sum, expense) => sum + expense.amount, 0);
+                                          // Calculate net income from payroll
+                      const payrollTaxes = (month.data.payroll?.federalWithholding || 0) + 
+                                           (month.data.payroll?.stateTaxCA || 0) + 
+                                           (month.data.payroll?.oasdiSocialSecurity || 0) + 
+                                           (month.data.payroll?.medicare || 0) + 
+                                           (month.data.payroll?.caSDI || 0);
+                      const payrollPretax = (month.data.payroll?.contribution401k || 0) +
+                                           (month.data.payroll?.hsaContribution || 0) +
+                                           (month.data.payroll?.healthInsurance || 0) +
+                                           (month.data.payroll?.lifeInsurance || 0) +
+                                           (month.data.payroll?.disabilityInsurance || 0) +
+                                           (month.data.payroll?.parkingTransit || 0) +
+                                           (month.data.payroll?.dependentCareFSA || 0) +
+                                           (month.data.payroll?.otherPretax || 0);
+                      const payrollOther = (month.data.payroll?.generalDeductions || 0) + 
+                                          (month.data.payroll?.employeePostTaxDeductions || 0);
+                      const biweeklyNet = (month.data.payroll?.grossPay || 0) - payrollTaxes - payrollPretax - payrollOther;
+                      const monthlyNet = biweeklyNet * 2.17;
+                      const additionalIncome = Object.values(month.data.additionalIncome || {}).reduce((sum, val) => sum + val, 0);
+                      const monthIncome = monthlyNet + additionalIncome;
+                      const monthOutflows = Object.values(month.data.investments).reduce((sum, val) => sum + val, 0) +
+                                         Object.values(month.data.savings).reduce((sum, val) => sum + val, 0) +
+                                         Object.values(month.data.creditCards).reduce((sum, val) => sum + val, 0) +
+                                         Object.values(month.data.essentials).reduce((sum, val) => sum + val, 0) +
+                                         Object.values(month.data.discretionary).reduce((sum, val) => sum + val, 0) +
+                                         month.customExpenses.reduce((sum, expense) => sum + expense.amount, 0);
                     const monthNetCashFlow = monthIncome - monthOutflows;
                     
                     return (
@@ -624,7 +591,7 @@ const FinancialTracker = () => {
   );
 
   return (
-    <div className="max-w-6xl mx-auto p-6 bg-white">
+    <div className="max-w-6xl mx-auto p-6 bg-white text-gray-900">
       {/* Modals */}
       <SettingsModal />
       <ArchiveModal />
@@ -717,7 +684,7 @@ const FinancialTracker = () => {
 
       {/* Summary Cards */}
       <SummaryCards 
-        totalIncome={totalIncome}
+        totalIncome={totalMonthlyIncome}
         totalOutflows={totalOutflows}
         netCashFlow={netCashFlow}
       />
@@ -736,21 +703,53 @@ const FinancialTracker = () => {
           <div className="text-right">Formatted</div>
         </div>
 
-        {/* Income Section */}
+        {/* Payroll Section */}
         <TableSection 
-          title="💰 Income Sources" 
-          data={monthlyData.income} 
-          category="income"
-          bgColor="bg-green-100"
+          title="💼 Payroll Details (Biweekly)" 
+          data={monthlyData.payroll} 
+          category="payroll"
+          bgColor="bg-blue-100"
           onUpdate={updateValue}
         />
 
-        {/* Automatic Deductions - Special handling */}
-        <AutoDeductionsSection 
-          automaticDeductions={monthlyData.automaticDeductions}
-          onUpdateAmount={updateDeductionAmount}
-          onUpdateDescription={updateDeductionDescription}
-          totalAutomaticDeductions={totalAutomaticDeductions}
+        {/* Net Income Display - Calculated, Not Editable */}
+        <div className="bg-green-50 border-l-4 border-green-400">
+          <div className="grid grid-cols-3 gap-4 p-3 bg-green-100 font-semibold border-b">
+            <div>💰 Net Income (Calculated)</div>
+            <div className="text-center">Amount</div>
+            <div className="text-right">Monthly Equivalent</div>
+          </div>
+          <div className="p-3 space-y-2">
+            <div className="grid grid-cols-3 gap-4 py-1">
+              <div className="font-medium">Biweekly Net Pay:</div>
+              <div className="text-center font-bold text-green-600">${biweeklyNetPay.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+              <div className="text-right">${monthlyNetPay.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+            </div>
+            <div className="grid grid-cols-3 gap-4 py-1 text-sm text-gray-600">
+              <div>Gross Pay (Biweekly):</div>
+              <div className="text-center">${biweeklyGrossPay.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+              <div className="text-right">${monthlyGrossPay.toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+            </div>
+            <div className="grid grid-cols-3 gap-4 py-1 text-sm text-gray-600">
+              <div>Total Deductions:</div>
+              <div className="text-center">-${(totalTaxDeductions + totalPretaxDeductions + totalOtherDeductions).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+              <div className="text-right">-${((totalTaxDeductions + totalPretaxDeductions + totalOtherDeductions) * 2.17).toLocaleString('en-US', { minimumFractionDigits: 2 })}</div>
+            </div>
+            <div className="grid grid-cols-3 gap-4 py-1 text-xs text-gray-500 border-t pt-2">
+              <div>Effective Tax Rate:</div>
+              <div className="text-center">{biweeklyGrossPay > 0 ? (((totalTaxDeductions + totalPretaxDeductions + totalOtherDeductions) / biweeklyGrossPay) * 100).toFixed(1) : 0}%</div>
+              <div className="text-right">Monthly calculation: biweekly × 2.17</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Additional Income Sources */}
+        <TableSection 
+          title="💰 Additional Income Sources" 
+          data={monthlyData.additionalIncome} 
+          category="additionalIncome"
+          bgColor="bg-green-100"
+          onUpdate={updateValue}
         />
 
         {/* Venmo Section - Special handling */}
@@ -820,15 +819,19 @@ const FinancialTracker = () => {
         <div className="bg-gray-200 p-4 border-t-2">
           <div className="grid grid-cols-2 gap-8">
             <div>
-              <h4 className="font-semibold mb-2">Monthly Summary</h4>
-              <div className="space-y-1 text-sm">
+              <h4 className="font-bold text-gray-900 mb-2">Monthly Summary</h4>
+              <div className="space-y-1 text-sm font-medium text-gray-900">
                 <div className="flex justify-between">
-                  <span>Total Income:</span>
-                  <span className="font-medium">${totalIncome.toLocaleString()}</span>
+                  <span>Monthly Net Income:</span>
+                  <span className="font-bold text-gray-900">${totalMonthlyIncome.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span>Auto Deductions:</span>
-                  <span className="font-medium">-${totalAutomaticDeductions.toLocaleString()}</span>
+                <div className="flex justify-between text-xs text-gray-600">
+                  <span>  • Payroll Net:</span>
+                  <span>${monthlyNetPay.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-xs text-gray-600">
+                  <span>  • Additional:</span>
+                  <span>${totalAdditionalIncome.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Venmo Net Flow:</span>
@@ -863,8 +866,8 @@ const FinancialTracker = () => {
               </div>
             </div>
             <div>
-              <h4 className="font-semibold mb-2">Account Allocation</h4>
-              <div className="space-y-1 text-sm">
+              <h4 className="font-bold text-gray-900 mb-2">Account Allocation</h4>
+              <div className="space-y-1 text-sm font-medium text-gray-900">
                 <div className="flex justify-between">
                   <span>Total Investments:</span>
                   <span className="font-medium text-purple-600">${totalInvestments.toLocaleString()}</span>
@@ -875,11 +878,11 @@ const FinancialTracker = () => {
                 </div>
                 <div className="flex justify-between">
                   <span>Investment Rate:</span>
-                  <span className="font-medium">{totalIncome > 0 ? ((totalInvestments / totalIncome) * 100).toFixed(1) : 0}%</span>
+                  <span className="font-medium">{totalMonthlyIncome > 0 ? ((totalInvestments / totalMonthlyIncome) * 100).toFixed(1) : 0}%</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Savings Rate:</span>
-                  <span className="font-medium">{totalIncome > 0 ? ((totalSavings / totalIncome) * 100).toFixed(1) : 0}%</span>
+                  <span className="font-medium">{totalMonthlyIncome > 0 ? ((totalSavings / totalMonthlyIncome) * 100).toFixed(1) : 0}%</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Total Spending:</span>
@@ -906,7 +909,7 @@ const FinancialTracker = () => {
           <li>• <strong>Month Navigation:</strong> Use Previous/Next buttons to navigate between months. Data auto-saves to browser storage.</li>
           <li>• <strong>Data Storage:</strong> All data is stored locally in your browser (localStorage). Use Backup/Restore for file backups.</li>
           <li>• <strong>Archive:</strong> View all saved months with key metrics and options to edit, export PDFs, or delete.</li>
-          <li>• <strong>Custom Expenses:</strong> Add specific purchases with categories for detailed tracking (e.g., "Dining - Starbucks - $15.50").</li>
+          <li>• <strong>Custom Expenses:</strong> Add specific purchases with categories for detailed tracking (e.g., "Dining - Starbucks").</li>
           <li>• <strong>Investment Allocation:</strong> Track monthly contributions to each of your investment accounts.</li>
           <li>• <strong>Goal:</strong> Aim for positive net cash flow and 20%+ total investment rate across all accounts.</li>
         </ul>

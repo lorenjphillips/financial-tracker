@@ -2,13 +2,28 @@ import jsPDF from 'jspdf';
 import { format, parseISO } from 'date-fns';
 
 interface MonthlyData {
-  income: {
-    primarySalary: number;
-    businessIncome: number;
-    otherIncome: number;
+  payroll: {
+    grossPay: number;
+    federalWithholding: number;
+    stateTaxCA: number;
+    oasdiSocialSecurity: number;
+    medicare: number;
+    caSDI: number;
+    contribution401k: number;
+    hsaContribution: number;
+    healthInsurance: number;
+    lifeInsurance: number;
+    disabilityInsurance: number;
+    parkingTransit: number;
+    dependentCareFSA: number;
+    otherPretax: number;
+    generalDeductions: number;
+    employeePostTaxDeductions: number;
   };
-  automaticDeductions: {
-    [key: string]: { amount: number; description: string };
+  additionalIncome: {
+    businessIncome: number;
+    freelanceIncome: number;
+    otherIncome: number;
   };
   investments: {
     fidelity: number;
@@ -122,7 +137,7 @@ export const generateFinancialPDF = async (data: PDFExportData) => {
   
   // Categories breakdown
   const categories = [
-    { name: 'Income', total: totalIncome, items: monthlyData.income },
+    { name: 'Additional Income', total: Object.values(monthlyData.additionalIncome).reduce((sum, val) => sum + val, 0), items: monthlyData.additionalIncome },
     { name: 'Investments', total: totalInvestments, items: monthlyData.investments },
     { name: 'Savings', total: totalSavings, items: monthlyData.savings },
     { name: 'Credit Cards', total: totalCreditCards, items: monthlyData.creditCards },

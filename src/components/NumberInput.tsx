@@ -13,7 +13,7 @@ const NumberInput: React.FC<NumberInputProps> = React.memo(({
   value,
   onChange,
   placeholder = "0",
-  className = "w-full px-2 py-1 text-sm border rounded",
+  className = "w-full px-2 py-1 text-sm font-semibold text-gray-900 border rounded",
   step = "0.01",
   id
 }) => {

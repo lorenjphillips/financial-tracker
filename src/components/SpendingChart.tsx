@@ -25,7 +25,7 @@ const SpendingChart: React.FC<SpendingChartProps> = React.memo(({ categories, to
     <div className="mb-8 p-6 bg-white border rounded-lg">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-lg font-semibold">Monthly Spending Breakdown</h3>
-        <span className="text-sm text-gray-600">
+        <span className="text-sm font-medium text-gray-700">
           Total: ${totalSpending.toLocaleString()}
         </span>
       </div>
@@ -39,7 +39,7 @@ const SpendingChart: React.FC<SpendingChartProps> = React.memo(({ categories, to
               style={{ backgroundColor: category.color }}
             />
             <span className="text-sm text-gray-700">{category.name}</span>
-            <span className="text-xs text-gray-500">
+            <span className="text-xs font-medium text-gray-600">
               ${category.amount.toLocaleString()}
             </span>
           </div>
@@ -65,7 +65,7 @@ const SpendingChart: React.FC<SpendingChartProps> = React.memo(({ categories, to
                     <span className="text-sm font-semibold">
                       ${category.amount.toLocaleString()}
                     </span>
-                    <span className="text-xs text-gray-500 ml-2">
+                    <span className="text-xs font-medium text-gray-600 ml-2">
                       ({spendingPercentage.toFixed(1)}%)
                     </span>
                   </div>
@@ -88,7 +88,7 @@ const SpendingChart: React.FC<SpendingChartProps> = React.memo(({ categories, to
       <div className="mt-6 pt-4 border-t">
         <div className="flex justify-between items-center mb-2">
           <span className="text-sm font-medium text-gray-700">Overall Distribution</span>
-          <span className="text-sm text-gray-600">${totalSpending.toLocaleString()}</span>
+          <span className="text-sm font-medium text-gray-700">${totalSpending.toLocaleString()}</span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-4 flex overflow-hidden">
           {categories

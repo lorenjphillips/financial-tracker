@@ -32,7 +32,7 @@ const CustomExpensesSection: React.FC<CustomExpensesSectionProps> = React.memo((
     <h3 className="text-lg font-semibold p-3 bg-orange-100 border-b">
       📝 Itemized Custom Expenses
     </h3>
-    <div className="bg-orange-25 p-3 text-sm text-orange-800 border-b">
+    <div className="bg-orange-50 p-3 text-sm text-orange-900 font-medium border-b">
       <p><strong>Add specific expenses:</strong> Create custom categories and itemize individual purchases for detailed tracking.</p>
     </div>
     
@@ -43,7 +43,7 @@ const CustomExpensesSection: React.FC<CustomExpensesSectionProps> = React.memo((
           type="text"
           value={newExpense.category}
           onChange={(e) => onNewExpenseChange('category', e.target.value)}
-          className="w-full px-2 py-1 text-sm border rounded"
+          className="w-full px-2 py-1 text-sm font-semibold text-gray-900 border rounded"
           placeholder="Category (e.g., Dining)"
           id="new-expense-category"
         />
@@ -53,7 +53,7 @@ const CustomExpensesSection: React.FC<CustomExpensesSectionProps> = React.memo((
           type="text"
           value={newExpense.name}
           onChange={(e) => onNewExpenseChange('name', e.target.value)}
-          className="w-full px-2 py-1 text-sm border rounded"
+          className="w-full px-2 py-1 text-sm font-semibold text-gray-900 border rounded"
           placeholder="Expense name (e.g., Starbucks)"
           id="new-expense-name"
         />
@@ -81,7 +81,7 @@ const CustomExpensesSection: React.FC<CustomExpensesSectionProps> = React.memo((
     {/* Existing expenses */}
     {customExpenses.length > 0 && (
       <div>
-        <div className="grid grid-cols-12 gap-2 p-2 bg-gray-100 border-b text-sm font-semibold">
+        <div className="grid grid-cols-12 gap-2 p-2 bg-gray-100 border-b text-sm font-bold text-gray-900">
           <div className="col-span-3">Category</div>
           <div className="col-span-4">Expense Name</div>
           <div className="col-span-2">Amount</div>
@@ -89,13 +89,13 @@ const CustomExpensesSection: React.FC<CustomExpensesSectionProps> = React.memo((
           <div className="col-span-1">Action</div>
         </div>
         {customExpenses.map((expense) => (
-          <div key={`expense-${expense.id}`} className="grid grid-cols-12 gap-2 p-2 border-b hover:bg-gray-25">
+          <div key={`expense-${expense.id}`} className="grid grid-cols-12 gap-2 p-2 border-b hover:bg-gray-50">
             <div className="col-span-3">
               <input
                 type="text"
                 value={expense.category}
                 onChange={(e) => onUpdateCustomExpense(expense.id, 'category', e.target.value)}
-                className="w-full px-2 py-1 text-sm border rounded"
+                className="w-full px-2 py-1 text-sm font-semibold text-gray-900 border rounded"
                 id={`expense-category-${expense.id}`}
               />
             </div>
@@ -104,7 +104,7 @@ const CustomExpensesSection: React.FC<CustomExpensesSectionProps> = React.memo((
                 type="text"
                 value={expense.name}
                 onChange={(e) => onUpdateCustomExpense(expense.id, 'name', e.target.value)}
-                className="w-full px-2 py-1 text-sm border rounded"
+                className="w-full px-2 py-1 text-sm font-semibold text-gray-900 border rounded"
                 id={`expense-name-${expense.id}`}
               />
             </div>
@@ -115,7 +115,7 @@ const CustomExpensesSection: React.FC<CustomExpensesSectionProps> = React.memo((
                 id={`expense-amount-${expense.id}`}
               />
             </div>
-            <div className="col-span-2 text-sm font-medium text-right flex items-center">
+            <div className="col-span-2 text-sm font-bold text-gray-900 text-right flex items-center">
               ${expense.amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <div className="col-span-1 flex items-center">
@@ -132,7 +132,7 @@ const CustomExpensesSection: React.FC<CustomExpensesSectionProps> = React.memo((
     )}
     
     <div className="bg-gray-100 p-3">
-      <div className="flex justify-between font-semibold">
+      <div className="flex justify-between font-bold text-gray-900">
         <span>Total Custom Expenses:</span>
         <span>${totalCustomExpenses.toLocaleString()}</span>
       </div>

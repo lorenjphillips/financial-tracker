@@ -19,9 +19,9 @@ const TableSection: React.FC<TableSectionProps> = React.memo(({
   <div className="mb-6">
     <h3 className={`text-lg font-semibold p-3 ${bgColor} border-b`}>{title}</h3>
     {Object.entries(data).map(([key, value]) => (
-      <div key={`${category}-${key}`} className="grid grid-cols-3 gap-4 p-2 border-b hover:bg-gray-25">
+      <div key={`${category}-${key}`} className="grid grid-cols-3 gap-4 p-2 border-b hover:bg-gray-50">
         <div className="flex items-center">
-          <span className="text-sm capitalize">
+          <span className="text-sm font-semibold text-gray-900 capitalize">
             {key.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1')}
           </span>
         </div>
@@ -32,7 +32,7 @@ const TableSection: React.FC<TableSectionProps> = React.memo(({
             id={`${category}-${key}`}
           />
         </div>
-        <div className="text-sm font-medium text-right">
+        <div className="text-sm font-bold text-gray-900 text-right">
           ${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </div>
       </div>
