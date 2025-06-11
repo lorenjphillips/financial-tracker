@@ -46,7 +46,6 @@ interface MonthlyData {
     shopping: number;
     subscriptions: number;
     travel: number;
-    other: number;
   };
 }
 

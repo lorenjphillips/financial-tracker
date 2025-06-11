@@ -7,71 +7,7 @@ import AutoDeductionsSection from './AutoDeductionsSection';
 import VenmoSection from './VenmoSection';
 import CustomExpensesSection from './CustomExpensesSection';
 import SummaryCards from './SummaryCards';
-
-interface MonthlyData {
-  income: {
-    primarySalary: number;
-    businessIncome: number;
-    otherIncome: number;
-  };
-  automaticDeductions: {
-    '401k_contribution': { amount: number; description: string };
-    'hsa_contribution': { amount: number; description: string };
-    'cigna_insurance': { amount: number; description: string };
-    'health_insurance': { amount: number; description: string };
-    'life_insurance': { amount: number; description: string };
-    'disability_insurance': { amount: number; description: string };
-    'parking_transit': { amount: number; description: string };
-    'dependent_care_fsa': { amount: number; description: string };
-    'other_pretax': { amount: number; description: string };
-  };
-  investments: {
-    fidelity: number;
-    vanguard: number;
-    schwab_roth_ira: number;
-    swan_crypto: number;
-    river_crypto: number;
-  };
-  savings: {
-    marcus_hysa_emergency: number;
-    chase_business_checking: number;
-  };
-  venmo: {
-    venmo_cashout: number;
-    venmo_payments: number;
-    venmo_received: number;
-  };
-  creditCards: {
-    discover: number;
-    chase_sapphire: number;
-    x1: number;
-    wells_fargo: number;
-  };
-  essentials: {
-    rent_mortgage: number;
-    utilities: number;
-    insurance: number;
-    phone: number;
-    groceries: number;
-    transportation: number;
-  };
-  discretionary: {
-    dining_out: number;
-    entertainment: number;
-    shopping: number;
-    subscriptions: number;
-    travel: number;
-    other: number;
-  };
-}
-
-interface SavedMonth {
-  id: string;
-  monthYear: string;
-  data: MonthlyData;
-  customExpenses: Array<{ id: number; category: string; name: string; amount: number }>;
-  timestamp: string;
-}
+import SpendingChart from './SpendingChart';
 
 const FinancialTracker = () => {
   // UI state
@@ -81,7 +17,7 @@ const FinancialTracker = () => {
     const now = new Date();
     return format(now, 'yyyy-MM');
   });
-  const [savedMonths, setSavedMonths] = useState<SavedMonth[]>([]);
+  const [savedMonths, setSavedMonths] = useState([]);
   const [defaultConfig, setDefaultConfig] = useState({
     primarySalary: 6859,
     automaticDeductions: {
@@ -160,7 +96,7 @@ const FinancialTracker = () => {
   });
 
   // Custom itemized expenses
-  const [customExpenses, setCustomExpenses] = useState<Array<{ id: number; category: string; name: string; amount: number }>>([]);
+  const [customExpenses, setCustomExpenses] = useState([]);
   const [newExpense, setNewExpense] = useState({ category: '', name: '', amount: 0 });
 
   // Load saved months from localStorage on component mount
@@ -182,45 +118,43 @@ const FinancialTracker = () => {
     loadMonthData(currentMonthYear);
   }, [currentMonthYear]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const updateValue = (category: string, subcategory: string, value: string) => {
+  const updateValue = (category, subcategory, value) => {
     setMonthlyData(prev => ({
       ...prev,
       [category]: {
-        ...prev[category as keyof typeof prev],
+        ...prev[category],
         [subcategory]: parseFloat(value) || 0
       }
     }));
   };
 
-  const updateDeductionAmount = (key: string, amount: string) => {
+  const updateDeductionAmount = (key, amount) => {
     setMonthlyData(prev => ({
       ...prev,
       automaticDeductions: {
         ...prev.automaticDeductions,
         [key]: {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ...(prev.automaticDeductions as any)[key],
+          ...prev.automaticDeductions[key],
           amount: parseFloat(amount) || 0
         }
       }
     }));
   };
 
-  const updateDeductionDescription = (key: string, description: string) => {
+  const updateDeductionDescription = (key, description) => {
     setMonthlyData(prev => ({
       ...prev,
       automaticDeductions: {
         ...prev.automaticDeductions,
         [key]: {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          ...(prev.automaticDeductions as any)[key],
+          ...prev.automaticDeductions[key],
           description: description
         }
       }
     }));
   };
 
-  const updateDefaultConfig = (category: string, key: string | null, field: string | null, value: string) => {
+  const updateDefaultConfig = (category, key, field, value) => {
     if (category === 'primarySalary') {
       setDefaultConfig(prev => ({
         ...prev,
@@ -231,10 +165,9 @@ const FinancialTracker = () => {
         ...prev,
         automaticDeductions: {
           ...prev.automaticDeductions,
-          [key as string]: {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            ...(prev.automaticDeductions as any)[key as string],
-            [field as string]: field === 'amount' ? parseFloat(value) || 0 : value
+          [key]: {
+            ...prev.automaticDeductions[key],
+            [field]: field === 'amount' ? parseFloat(value) || 0 : value
           }
         }
       }));
@@ -272,18 +205,18 @@ const FinancialTracker = () => {
     }
   };
 
-  const removeCustomExpense = (id: number) => {
+  const removeCustomExpense = (id) => {
     setCustomExpenses(prev => prev.filter(expense => expense.id !== id));
   };
 
-  const updateCustomExpense = (id: number, field: string, value: string | number) => {
+  const updateCustomExpense = (id, field, value) => {
     setCustomExpenses(prev => prev.map(expense => 
-      expense.id === id ? { ...expense, [field]: field === 'amount' ? parseFloat(value as string) || 0 : value } : expense
+      expense.id === id ? { ...expense, [field]: field === 'amount' ? parseFloat(value) || 0 : value } : expense
     ));
   };
 
   // Month management functions
-  const loadMonthData = (monthYear: string) => {
+  const loadMonthData = (monthYear) => {
     const saved = savedMonths.find(m => m.monthYear === monthYear);
     if (saved) {
       setMonthlyData(saved.data);
@@ -342,7 +275,7 @@ const FinancialTracker = () => {
 
   const saveCurrentMonth = () => {
     const existingIndex = savedMonths.findIndex(m => m.monthYear === currentMonthYear);
-    const savedMonth: SavedMonth = {
+    const savedMonth = {
       id: currentMonthYear,
       monthYear: currentMonthYear,
       data: monthlyData,
@@ -357,7 +290,7 @@ const FinancialTracker = () => {
     }
   };
 
-  const deleteMonth = (monthYear: string) => {
+  const deleteMonth = (monthYear) => {
     setSavedMonths(prev => prev.filter(m => m.monthYear !== monthYear));
     if (monthYear === currentMonthYear) {
       // If deleting current month, reset to current month
@@ -366,7 +299,7 @@ const FinancialTracker = () => {
     }
   };
 
-  const navigateMonth = (direction: 'prev' | 'next') => {
+  const navigateMonth = (direction) => {
     const currentDate = parseISO(currentMonthYear + '-01');
     const newDate = new Date(currentDate);
     
@@ -421,14 +354,14 @@ const FinancialTracker = () => {
     URL.revokeObjectURL(url);
   };
 
-  const importData = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const importData = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const importedData = JSON.parse(e.target?.result as string);
+        const importedData = JSON.parse(e.target?.result);
         
         if (importedData.savedMonths && Array.isArray(importedData.savedMonths)) {
           setSavedMonths(importedData.savedMonths);
@@ -450,6 +383,11 @@ const FinancialTracker = () => {
     event.target.value = '';
   };
 
+  // Custom expense handlers
+  const handleNewExpenseChange = (field, value) => {
+    setNewExpense(prev => ({ ...prev, [field]: value }));
+  };
+
   // Calculate totals
   const totalIncome = Object.values(monthlyData.income).reduce((sum, val) => sum + val, 0);
   const totalAutomaticDeductions = Object.values(monthlyData.automaticDeductions).reduce((sum, val) => sum + val.amount, 0);
@@ -463,6 +401,19 @@ const FinancialTracker = () => {
   
   const totalOutflows = totalAutomaticDeductions + totalInvestments + totalSavings + Math.abs(totalVenmo) + totalCreditCards + totalEssentials + totalDiscretionary + totalCustomExpenses;
   const netCashFlow = totalIncome - totalOutflows;
+
+  // Prepare spending chart data
+  const spendingCategories = [
+    { name: 'Automatic Deductions', amount: totalAutomaticDeductions, color: '#3b82f6' },
+    { name: 'Investments', amount: totalInvestments, color: '#8b5cf6' },
+    { name: 'Savings', amount: totalSavings, color: '#10b981' },
+    { name: 'Credit Cards', amount: totalCreditCards, color: '#f59e0b' },
+    { name: 'Essentials', amount: totalEssentials, color: '#ef4444' },
+    { name: 'Discretionary', amount: totalDiscretionary, color: '#ec4899' },
+    { name: 'Custom Expenses', amount: totalCustomExpenses, color: '#f97316' }
+  ];
+
+  const totalSpending = spendingCategories.reduce((sum, cat) => sum + cat.amount, 0);
 
   const SettingsModal = () => (
     <div className={`fixed inset-0 bg-black bg-opacity-50 z-50 ${showSettings ? 'block' : 'hidden'}`}>
@@ -672,19 +623,6 @@ const FinancialTracker = () => {
     </div>
   );
 
-  // Component removed - using modular TableSection component
-
-  // Component removed - using modular AutoDeductionsSection component
-
-  // Component removed - using modular VenmoSection component
-
-  // Component removed - using modular CustomExpensesSection component
-
-  // Custom expense handlers
-  const handleNewExpenseChange = (field: string, value: string | number) => {
-    setNewExpense(prev => ({ ...prev, [field]: value }));
-  };
-
   return (
     <div className="max-w-6xl mx-auto p-6 bg-white">
       {/* Modals */}
@@ -782,6 +720,12 @@ const FinancialTracker = () => {
         totalIncome={totalIncome}
         totalOutflows={totalOutflows}
         netCashFlow={netCashFlow}
+      />
+
+      {/* Spending Chart */}
+      <SpendingChart 
+        categories={spendingCategories}
+        totalSpending={totalSpending}
       />
 
       {/* Main Tracking Table */}
@@ -962,7 +906,7 @@ const FinancialTracker = () => {
           <li>• <strong>Month Navigation:</strong> Use Previous/Next buttons to navigate between months. Data auto-saves to browser storage.</li>
           <li>• <strong>Data Storage:</strong> All data is stored locally in your browser (localStorage). Use Backup/Restore for file backups.</li>
           <li>• <strong>Archive:</strong> View all saved months with key metrics and options to edit, export PDFs, or delete.</li>
-          <li>• <strong>Custom Expenses:</strong> Add specific purchases with categories for detailed tracking (e.g., &ldquo;Dining - Starbucks - $15.50&rdquo;).</li>
+          <li>• <strong>Custom Expenses:</strong> Add specific purchases with categories for detailed tracking (e.g., "Dining - Starbucks - $15.50").</li>
           <li>• <strong>Investment Allocation:</strong> Track monthly contributions to each of your investment accounts.</li>
           <li>• <strong>Goal:</strong> Aim for positive net cash flow and 20%+ total investment rate across all accounts.</li>
         </ul>
